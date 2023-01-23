@@ -1,0 +1,151 @@
+---
+title: "Visualise Normal distribution data"
+author: "Pooran Dewari"
+date: "2023-01-22"
+output:
+  html_document:
+    theme: united
+    highlight: kate
+---
+<style type="text/css">
+
+body, td {
+   font-size: 18px;
+}
+code.r{
+  font-size: 14px;
+}
+pre {
+  font-size: 14px
+}
+</style>
+
+
+
+### First, a bit of data wrangling
+
+Let's load the weight-height.csv and have a quick look at the data
+
+```{r message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(glue)
+# Load csv data
+weight <- read_csv("weight-height.csv")
+weight
+```
+
+We will analyse the male data, so just extract male data & add a new column with weight in kg units
+
+```{r message=FALSE, warning=FALSE}
+# Filter data for male samples, convert lb to kg
+weight_male <- weight %>% 
+  filter(Gender == "Male") %>% 
+  mutate(weight_kg = Weight/2.20)
+
+weight_male
+
+```
+
+```{r message=FALSE, warning=FALSE}
+# Compute standard deviation & mean for male weight
+sd_weight = round(sd(weight_male$weight_kg),2)
+mean_weight = round(mean(weight_male$weight_kg), 2)
+
+glue('sd_weight is -> {sd_weight} kg')
+glue('mean_weight is -> {mean_weight} kg')
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# Simple histogram to visualise male weight distribution
+weight_male %>% 
+  ggplot()+
+  geom_histogram(aes(x=weight_kg), bins = 100, fill = "thistle3")+
+  xlab("Male weight in kg")+
+  geom_vline(xintercept = mean_weight, linetype="solid", 
+             color = "black", size=0.5)+
+  annotate("text", x=mean_weight+3, y=100, label= "mean", color = "black")+
+  theme_bw()
+
+```
+
+```{r message=FALSE, warning=FALSE}
+# Create new df with labels for male weight within 1, 2, and 3-sd from mean weight
+weight_male_with_sd <- weight_male %>% 
+  mutate(one_sd = case_when(weight_kg > mean_weight - sd_weight & 
+                              weight_kg < mean_weight + sd_weight  ~ 'one_sd',
+                            TRUE ~ 'outside'),
+        two_sd = case_when(weight_kg > mean_weight - 2*sd_weight & 
+                               weight_kg < mean_weight + 2*sd_weight  ~ 'two_sd',
+                             TRUE ~ 'outside'),
+        three_sd = case_when(weight_kg > mean_weight - 3*sd_weight & 
+                             weight_kg < mean_weight + 3*sd_weight  ~ 'three_sd',
+                           TRUE ~ 'outside')
+        )
+
+weight_male_with_sd
+```
+
+### Now some fun plotting
+
+```{r message=FALSE, warning=FALSE}
+# Visualise males within 1-sd from mean weight
+weight_male_with_sd %>% 
+  ggplot(aes(fill = one_sd))+
+  geom_histogram(aes(x=weight_kg), bins = 100)+
+  xlab("Male weight in kg")+
+  ylab("Count")+
+  labs(fill='Samples within') +
+  geom_vline(xintercept = mean_weight, linetype="solid", 
+             color = "black", size=0.5)+
+  annotate("text", x=mean_weight+3, y=100, label= "mean")+
+  theme_bw()
+
+  
+# Visualise males within 2-sd from mean weight
+weight_male_with_sd %>% 
+  ggplot(aes(fill = two_sd))+
+  geom_histogram(aes(x=weight_kg), bins = 100)+
+  xlab("Male weight in kg")+
+  ylab("Count")+
+  labs(fill='Samples within') +
+  geom_vline(xintercept = mean_weight, linetype="solid", 
+             color = "black", size=0.5)+
+  annotate("text", x=mean_weight+3, y=100, label= "mean")+
+  theme_bw()
+  
+
+# Visualise males within 3-sd from mean weight
+weight_male_with_sd %>% 
+  ggplot(aes(fill = three_sd))+
+  geom_histogram(aes(x=weight_kg), bins = 100)+
+  xlab("Male weight in kg")+
+  ylab("Count")+
+  labs(fill='Samples within') +
+  geom_vline(xintercept = mean_weight, linetype="solid", 
+             color = "black", size=0.5)+
+  annotate("text", x=mean_weight+3, y=100, label= "mean")+
+  theme_bw()
+```
+
+```{r message=FALSE, warning=FALSE}
+# Calculate % of males within 1,2, and 3-sd from mean weight
+weight_male_with_sd %>% 
+  count(one_sd == "one_sd") %>% 
+  mutate(percent = n*100/sum(n)) %>% 
+  rename_with(.cols = 1, ~"within_one_sd")
+
+
+
+weight_male_with_sd %>% 
+  count(two_sd == "two_sd") %>% 
+  mutate(percent = n*100/sum(n))%>% 
+  rename_with(.cols = 1, ~"within_two_sd")
+
+weight_male_with_sd %>% 
+  count(three_sd == "three_sd") %>% 
+  mutate(percent = n*100/sum(n))%>% 
+  rename_with(.cols = 1, ~"within_three_sd")
+```
+
